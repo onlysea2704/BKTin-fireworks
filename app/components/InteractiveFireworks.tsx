@@ -120,7 +120,7 @@ class FloatingText {
     let currentAlpha = 1;
     if (this.life < 40) currentAlpha = this.life / 40;
     else if (this.life > this.maxLife - 30) currentAlpha = (this.maxLife - this.life) / 30;
-    
+
     ctx.globalAlpha = Math.max(0, Math.min(currentAlpha, 1));
     ctx.translate(this.x, this.y);
     ctx.scale(this.scale, this.scale);
@@ -155,37 +155,17 @@ export default function InteractiveFireworks({ initialWishes }: Props) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  // Audio Context Refs
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const dataArrayRef = useRef<Uint8Array | null>(null);
-  const isAudioInitialized = useRef(false);
-
   // Form states
   const [sender, setSender] = useState('');
   const [messages, setMessages] = useState<string[]>(['']);
   const [loading, setLoading] = useState(false);
   const [newLink, setNewLink] = useState('');
 
-  // 1. Audio Initialization & Global Interaction
+  // 1. Nhạc nền cơ bản & Tương tác đầu tiên
   useEffect(() => {
     const handleFirstInteraction = () => {
-      if (!isAudioInitialized.current && audioRef.current) {
-        const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
-        const audioCtx = new AudioContextClass();
-        audioCtxRef.current = audioCtx;
-        const analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 256;
-        analyserRef.current = analyser;
-        const source = audioCtx.createMediaElementSource(audioRef.current);
-        source.connect(analyser);
-        analyser.connect(audioCtx.destination);
-        dataArrayRef.current = new Uint8Array(analyser.frequencyBinCount);
-        isAudioInitialized.current = true;
-      }
-      if (audioCtxRef.current?.state === 'suspended') audioCtxRef.current.resume();
-      if (audioRef.current?.paused) {
-        audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+      if (audioRef.current && audioRef.current.paused) {
+        audioRef.current.play().then(() => setIsPlaying(true)).catch(() => { });
       }
       document.removeEventListener('click', handleFirstInteraction);
     };
@@ -224,7 +204,7 @@ export default function InteractiveFireworks({ initialWishes }: Props) {
     setLoading(false);
   };
 
-  // 3. Canvas Logic
+  // 3. Canvas Logic (Ngẫu nhiên hoàn toàn)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -250,33 +230,28 @@ export default function InteractiveFireworks({ initialWishes }: Props) {
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.globalCompositeOperation = 'lighter';
 
-      // Phân tích âm thanh để quyết định mật độ bắn
-      let volume = 0;
-      if (analyserRef.current && dataArrayRef.current) {
-        analyserRef.current.getByteFrequencyData(dataArrayRef.current);
-        volume = dataArrayRef.current.reduce((a, b) => a + b) / dataArrayRef.current.length;
-      }
-
-      let prob = window.innerWidth < 768 ? 0.005 : 0.01;
-      if (volume > 80) prob = 0.06;
-      if (volume > 110) prob = 0.15;
+      // Tần suất bắn pháo ngẫu nhiên (điều chỉnh cho mượt)
+      const prob = window.innerWidth < 768 ? 0.03 : 0.05;
 
       if (Math.random() < prob) {
         const sx = Math.random() * canvas.width;
         const tx = sx + (Math.random() * 200 - 100);
-        const ty = (canvas.height * 0.2) + Math.random() * (canvas.height * 0.4);
+        const ty = (canvas.height * 0.1) + Math.random() * (canvas.height * 0.5);
         fireworks.push(new Firework(sx, canvas.height, tx, ty));
       }
 
-      // Update & Draw
+      // Cập nhật và vẽ
       for (let i = fireworks.length - 1; i >= 0; i--) {
         fireworks[i].update();
         fireworks[i].draw(ctx);
         const fw = fireworks[i];
         const dist = Math.sqrt(Math.pow(fw.x - fw.sx, 2) + Math.pow(fw.y - fw.sy, 2));
+        
         if (dist >= fw.distanceToTarget) {
           for (let j = 0; j < 60; j++) particles.push(new Particle(fw.tx, fw.ty, fw.hue));
-          if (wishes.length > 0 && Math.random() < 0.3 && fw.tx > canvas.width * 0.2 && fw.tx < canvas.width * 0.8) {
+          
+          // Chỉ hiện lời chúc khi pháo nổ ở vùng trung tâm
+          if (wishes.length > 0 && Math.random() < 0.4 && fw.tx > canvas.width * 0.15 && fw.tx < canvas.width * 0.85) {
             const randomWish = wishes[Math.floor(Math.random() * wishes.length)];
             floatingTexts.push(new FloatingText(fw.tx, fw.ty, randomWish, fw.hue));
           }
@@ -349,12 +324,12 @@ export default function InteractiveFireworks({ initialWishes }: Props) {
         <button onClick={toggleMusic} className="w-10 h-10 flex items-center justify-center bg-black/50 backdrop-blur border border-white/20 rounded-full text-lg">
           {isPlaying ? '🔊' : '🔇'}
         </button>
-        <button onClick={() => setIsModalOpen(true)} className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-full transition-all text-sm md:text-base">
+        <button onClick={() => setIsModalOpen(true)} className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-white font-bold rounded-full transition-all text-sm md:text-base">
           ✨ Tạo Lời Chúc
         </button>
       </div>
 
-      {/* Modal */}
+      {/* Modal Form */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="bg-gray-900 border border-yellow-500/30 p-6 rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto text-white">
