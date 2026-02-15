@@ -130,7 +130,7 @@ class FloatingText {
     ctx.shadowColor = `hsl(${this.hue}, 100%, 50%)`;
 
     const isMobile = window.innerWidth < 768;
-    const fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif';
+    const fontFamily = 'Roboto, sans-serif';
     const senderSize = isMobile ? "14px" : "16px";
     const messageSize = isMobile ? "20px" : "28px";
     const senderOffsetY = isMobile ? -18 : -25;
@@ -290,7 +290,7 @@ export default function InteractiveFireworks({ initialWishes }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 w-full h-full bg-black overflow-hidden z-0 font-sans">
+    <div className="fixed inset-0 w-full h-full bg-black overflow-hidden z-0 font-roboto">
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full block z-0" />
 
       {/* City Background */}
@@ -301,7 +301,9 @@ export default function InteractiveFireworks({ initialWishes }: Props) {
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Pacifico&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap');
         .font-tet { font-family: 'Pacifico', cursive; }
+        .font-roboto { font-family: 'Roboto', sans-serif; }
         .neon-bktin { color: #f0f9ff; text-shadow: 0 0 2px #fff, 0 0 8px #3b82f6, 0 0 20px #2563eb; }
         .neon-chucmung { color: #fff; text-shadow: 0 0 5px #fff, 0 0 10px #06b6d4, 0 0 20px #0891b2; }
       `}</style>
@@ -309,7 +311,7 @@ export default function InteractiveFireworks({ initialWishes }: Props) {
       <audio ref={audioRef} src="/nhac_tet.mp3" loop />
 
       {/* Header UI */}
-      <div className="absolute top-4 left-4 z-20 flex items-center gap-3 pointer-events-none">
+      <div className="absolute top-4 left-3 z-20 flex items-center gap-1 pointer-events-none">
         <div className="relative">
           <div className="absolute inset-0 bg-yellow-500 blur-lg opacity-70 rounded-full animate-pulse"></div>
           <img src="/images/avatar-bktin.jpg" alt="Logo" className="relative w-10 h-10 md:w-14 md:h-14 bg-white rounded-full border-2 border-yellow-400 p-0.25" />
@@ -321,25 +323,49 @@ export default function InteractiveFireworks({ initialWishes }: Props) {
       </div>
 
       {/* CỤM CONTROLS ĐÃ ĐƯỢC THIẾT KẾ LẠI ĐẸP MẮT HƠN */}
-      <div className="absolute top-4 right-4 z-20 flex items-center gap-2 md:gap-3 p-1.5 md:p-2 bg-black/30 backdrop-blur-md border border-white/10 rounded-full shadow-[0_0_20px_rgba(255,215,0,0.15)]">
+      <div className="absolute top-4 right-2 z-20 flex items-center gap-2 md:gap-3 p-1.5 md:p-2 bg-black/30 backdrop-blur-md border border-white/10 rounded-full shadow-[0_0_20px_rgba(255,215,0,0.15)]">
         
         {/* Nút Âm Nhạc */}
         <button 
           onClick={toggleMusic} 
-          className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full text-lg md:text-xl transition-all duration-300"
+          className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center bg-white/10 hover:bg-white/20 text-white rounded-full transition-all duration-300 hover:scale-110 shadow-[0_0_15px_rgba(255,255,255,0.1)]"
           title={isPlaying ? "Tắt nhạc" : "Bật nhạc"}
         >
-          {isPlaying ? '🔊' : '🔇'}
+          {isPlaying ? (
+            // Icon Loa đang phát nhạc (Có sóng âm)
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              strokeWidth={1.5} 
+              stroke="currentColor" 
+              className="w-5 h-5 md:w-6 md:h-6 transition-transform duration-300"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
+            </svg>
+          ) : (
+            // Icon Loa tắt nhạc (Có dấu X)
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              strokeWidth={1.5} 
+              stroke="currentColor" 
+              className="w-5 h-5 md:w-6 md:h-6 opacity-70 transition-transform duration-300"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
+            </svg>
+          )}
         </button>
         
         {/* Nút Tạo Lời Chúc */}
         <button 
           onClick={() => setIsModalOpen(true)} 
-          className="px-4 py-2 md:px-6 md:py-2.5 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-black font-extrabold rounded-full transition-all duration-300 transform hover:scale-105 shadow-[0_0_15px_rgba(245,158,11,0.4)] flex items-center gap-2"
+          className="px-2 py-2 md:px-6 md:py-2.5 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white font-bold rounded-full transition-all duration-300 transform hover:scale-105 shadow-[0_0_15px_rgba(245,158,11,0.4)] flex items-center gap-2"
         >
-          <span className="text-lg md:text-xl">✨</span>
-          <span className="text-sm md:text-base hidden sm:inline">Gửi Lời Chúc</span>
-          <span className="text-sm sm:hidden">Tạo</span>
+          {/* <span className="text-lg md:text-xl">✨</span> */}
+          <span className="text-sm md:text-base">Gửi Lời Chúc</span>
+          {/* <span className="text-sm sm:hidden">Tạo</span> */}
         </button>
 
       </div>
