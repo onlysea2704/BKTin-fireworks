@@ -18,7 +18,9 @@ async function getWishById(id: string) {
   const row = rows.find(r => r.get('id') === id);
   if (!row) return [];
 
+  // Lấy dữ liệu từ các cột trong Google Sheet
   const sender = row.get('sender');
+  const receiver = row.get('receiver') || 'Bạn'; // Thêm receiver, dự phòng chữ "Bạn" nếu dữ liệu cũ chưa có
   const messageData = row.get('message');
   
   let messagesArray: string[] = [];
@@ -28,8 +30,12 @@ async function getWishById(id: string) {
     messagesArray = [messageData]; // Fallback nếu dữ liệu cũ không phải JSON
   }
 
-  // Trả về mảng các object Wish chỉ của người gửi này
-  return messagesArray.map(msg => ({ sender, message: msg }));
+  // Trả về mảng các object Wish gồm sender, receiver và message
+  return messagesArray.map(msg => ({ 
+    sender, 
+    receiver, 
+    message: msg 
+  }));
 }
 
 export default async function WishPage({ params }: { params: Promise<{ id: string }> }) {
@@ -42,7 +48,7 @@ export default async function WishPage({ params }: { params: Promise<{ id: strin
 
   return (
     <main className="relative min-h-screen">
-      {/* Chỉ truyền đúng danh sách lời chúc của ID này vào Canvas */}
+      {/* Truyền danh sách lời chúc (đã có receiver) vào Canvas */}
       <InteractiveFireworks initialWishes={userWishes} />
     </main>
   );

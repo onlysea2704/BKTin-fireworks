@@ -5,6 +5,7 @@ import React, { useEffect, useRef, useState } from 'react';
 // --- INTERFACES ---
 interface Wish {
   sender: string;
+  receiver: string; // <-- THÊM TRƯỜNG NGƯỜI NHẬN
   message: string;
 }
 
@@ -12,7 +13,7 @@ interface Props {
   initialWishes: Wish[];
 }
 
-// --- CLASS DEFINITIONS (DI CHUYỂN RA NGOÀI ĐỂ VERCEL KHÔNG BÁO LỖI) ---
+// --- CLASS DEFINITIONS ---
 
 class Particle {
   x: number; y: number;
@@ -130,15 +131,16 @@ class FloatingText {
 
     const isMobile = window.innerWidth < 768;
     const fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif';
-    const senderSize = isMobile ? "14px" : "18px";
+    const senderSize = isMobile ? "14px" : "16px";
     const messageSize = isMobile ? "20px" : "28px";
     const senderOffsetY = isMobile ? -18 : -25;
 
-    ctx.font = `200 ${senderSize} ${fontFamily}`;
+    // --- CẬP NHẬT CHỮ HIỂN THỊ (NGƯỜI GỬI - NGƯỜI NHẬN) ---
+    ctx.font = `300 ${senderSize} ${fontFamily}`;
     ctx.fillStyle = `hsl(${this.hue}, 100%, 85%)`;
-    ctx.fillText(this.wish.sender + " chúc bạn", 0, senderOffsetY);
+    ctx.fillText(`${this.wish.sender} chúc ${this.wish.receiver}`, 0, senderOffsetY);
 
-    ctx.font = `400 ${messageSize} ${fontFamily}`;
+    ctx.font = `600 ${messageSize} ${fontFamily}`;
     ctx.fillStyle = "#ffffff";
     ctx.fillText(`${this.wish.message}`, 0, 5);
 
@@ -157,6 +159,7 @@ export default function InteractiveFireworks({ initialWishes }: Props) {
 
   // Form states
   const [sender, setSender] = useState('');
+  const [receiver, setReceiver] = useState(''); // Thêm state Người Nhận
   const [messages, setMessages] = useState<string[]>(['']);
   const [loading, setLoading] = useState(false);
   const [newLink, setNewLink] = useState('');
@@ -192,19 +195,20 @@ export default function InteractiveFireworks({ initialWishes }: Props) {
       const res = await fetch('/api/wishes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender, messages: validMessages }),
+        body: JSON.stringify({ sender, receiver, messages: validMessages }), // Gửi kèm receiver
       });
       const data = await res.json();
       if (data.success) {
         setNewLink(`${window.location.origin}${data.link}`);
-        const newWishes = validMessages.map(msg => ({ sender, message: msg }));
+        // Cập nhật mảng wishes cục bộ
+        const newWishes = validMessages.map(msg => ({ sender, receiver, message: msg }));
         setWishes(prev => [...prev, ...newWishes]);
       }
     } catch (err) { console.error(err); }
     setLoading(false);
   };
 
-  // 3. Canvas Logic (Ngẫu nhiên hoàn toàn)
+  // 3. Canvas Logic
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -230,7 +234,6 @@ export default function InteractiveFireworks({ initialWishes }: Props) {
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.globalCompositeOperation = 'lighter';
 
-      // Tần suất bắn pháo ngẫu nhiên (điều chỉnh cho mượt)
       const prob = window.innerWidth < 768 ? 0.03 : 0.05;
 
       if (Math.random() < prob) {
@@ -240,7 +243,6 @@ export default function InteractiveFireworks({ initialWishes }: Props) {
         fireworks.push(new Firework(sx, canvas.height, tx, ty));
       }
 
-      // Cập nhật và vẽ
       for (let i = fireworks.length - 1; i >= 0; i--) {
         fireworks[i].update();
         fireworks[i].draw(ctx);
@@ -250,7 +252,6 @@ export default function InteractiveFireworks({ initialWishes }: Props) {
         if (dist >= fw.distanceToTarget) {
           for (let j = 0; j < 60; j++) particles.push(new Particle(fw.tx, fw.ty, fw.hue));
           
-          // Chỉ hiện lời chúc khi pháo nổ ở vùng trung tâm
           if (wishes.length > 0 && Math.random() < 0.4 && fw.tx > canvas.width * 0.15 && fw.tx < canvas.width * 0.85) {
             const randomWish = wishes[Math.floor(Math.random() * wishes.length)];
             floatingTexts.push(new FloatingText(fw.tx, fw.ty, randomWish, fw.hue));
@@ -289,7 +290,7 @@ export default function InteractiveFireworks({ initialWishes }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 w-full h-full bg-black overflow-hidden z-0">
+    <div className="fixed inset-0 w-full h-full bg-black overflow-hidden z-0 font-sans">
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full block z-0" />
 
       {/* City Background */}
@@ -311,7 +312,7 @@ export default function InteractiveFireworks({ initialWishes }: Props) {
       <div className="absolute top-4 left-4 z-20 flex items-center gap-3 pointer-events-none">
         <div className="relative">
           <div className="absolute inset-0 bg-yellow-500 blur-lg opacity-70 rounded-full animate-pulse"></div>
-          <img src="/images/avatar-bktin.jpg" alt="Logo" className="relative w-10 h-10 md:w-14 md:h-14 bg-white rounded-full border-2 border-yellow-400" />
+          <img src="/images/avatar-bktin.jpg" alt="Logo" className="relative w-10 h-10 md:w-14 md:h-14 bg-white rounded-full border-2 border-yellow-400 p-0.25" />
         </div>
         <div className="flex flex-col">
           <h1 className="text-lg md:text-2xl font-black text-white uppercase neon-bktin tracking-widest">BKTIN</h1>
@@ -319,54 +320,109 @@ export default function InteractiveFireworks({ initialWishes }: Props) {
         </div>
       </div>
 
-      {/* Controls */}
-      <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
-        <button onClick={toggleMusic} className="w-10 h-10 flex items-center justify-center bg-black/50 backdrop-blur border border-white/20 rounded-full text-lg">
+      {/* CỤM CONTROLS ĐÃ ĐƯỢC THIẾT KẾ LẠI ĐẸP MẮT HƠN */}
+      <div className="absolute top-4 right-4 z-20 flex items-center gap-2 md:gap-3 p-1.5 md:p-2 bg-black/30 backdrop-blur-md border border-white/10 rounded-full shadow-[0_0_20px_rgba(255,215,0,0.15)]">
+        
+        {/* Nút Âm Nhạc */}
+        <button 
+          onClick={toggleMusic} 
+          className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full text-lg md:text-xl transition-all duration-300"
+          title={isPlaying ? "Tắt nhạc" : "Bật nhạc"}
+        >
           {isPlaying ? '🔊' : '🔇'}
         </button>
-        <button onClick={() => setIsModalOpen(true)} className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-white font-bold rounded-full transition-all text-sm md:text-base">
-          ✨ Tạo Lời Chúc
+        
+        {/* Nút Tạo Lời Chúc */}
+        <button 
+          onClick={() => setIsModalOpen(true)} 
+          className="px-4 py-2 md:px-6 md:py-2.5 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-black font-extrabold rounded-full transition-all duration-300 transform hover:scale-105 shadow-[0_0_15px_rgba(245,158,11,0.4)] flex items-center gap-2"
+        >
+          <span className="text-lg md:text-xl">✨</span>
+          <span className="text-sm md:text-base hidden sm:inline">Gửi Lời Chúc</span>
+          <span className="text-sm sm:hidden">Tạo</span>
         </button>
+
       </div>
 
       {/* Modal Form */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-gray-900 border border-yellow-500/30 p-6 rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto text-white">
+          <div className="bg-gray-900 border border-yellow-500/30 p-6 md:p-8 rounded-3xl w-full max-w-md max-h-[90vh] overflow-y-auto text-white shadow-[0_0_40px_rgba(0,0,0,0.8)]">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-yellow-400">Gửi Lời Chúc Năm Mới</h2>
-              <button onClick={() => { setIsModalOpen(false); setNewLink(''); }} className="text-2xl opacity-50 hover:opacity-100">✕</button>
+              <h2 className="text-xl md:text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 to-orange-500">
+                Gửi Lời Chúc Mới
+              </h2>
+              <button onClick={() => { setIsModalOpen(false); setNewLink(''); }} className="text-2xl text-white/50 hover:text-white transition-colors">✕</button>
             </div>
 
             {!newLink ? (
               <form onSubmit={handleSubmit} className="space-y-4">
-                <input
-                  type="text" placeholder="Tên của bạn" required value={sender}
-                  onChange={(e) => setSender(e.target.value)}
-                  className="w-full px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-yellow-500 outline-none"
-                />
-                {messages.map((msg, idx) => (
-                  <div key={idx} className="flex gap-2">
+                
+                {/* Khu vực Gửi & Nhận */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-yellow-500 font-bold mb-1 uppercase tracking-wider">Người gửi</label>
                     <input
-                      type="text" placeholder={`Lời chúc ${idx + 1}`} required value={msg}
-                      onChange={(e) => handleMessageChange(idx, e.target.value)}
-                      className="flex-1 px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-yellow-500 outline-none"
+                      type="text" placeholder="Tên của bạn" required value={sender}
+                      onChange={(e) => setSender(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-xl focus:border-yellow-500 focus:bg-black outline-none transition-all"
                     />
-                    {messages.length > 1 && (
-                      <button type="button" onClick={() => removeMessageInput(idx)} className="text-red-400 px-2">✕</button>
-                    )}
                   </div>
-                ))}
-                <button type="button" onClick={addMessageInput} className="text-yellow-500 text-sm font-medium">+ Thêm lời chúc</button>
-                <button type="submit" disabled={loading} className="w-full py-3 bg-gradient-to-r from-yellow-600 to-yellow-400 text-black font-bold rounded-lg mt-4 disabled:opacity-50">
-                  {loading ? 'Đang tạo...' : 'Bắt Đầu Bắn Pháo 🚀'}
+                  <div>
+                    <label className="block text-xs text-yellow-500 font-bold mb-1 uppercase tracking-wider">Người nhận</label>
+                    <input
+                      type="text" placeholder="Tên người nhận" required value={receiver}
+                      onChange={(e) => setReceiver(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-xl focus:border-yellow-500 focus:bg-black outline-none transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div className="h-px w-full bg-white/10 my-4"></div>
+
+                {/* Khu vực Lời chúc */}
+                <div>
+                  <label className="block text-xs text-yellow-500 font-bold mb-2 uppercase tracking-wider">Nội dung lời chúc</label>
+                  <div className="space-y-3">
+                    {messages.map((msg, idx) => (
+                      <div key={idx} className="flex gap-2">
+                        <input
+                          type="text" placeholder={`Lời chúc ${idx + 1}`} required value={msg}
+                          onChange={(e) => handleMessageChange(idx, e.target.value)}
+                          className="flex-1 px-4 py-2.5 bg-black/50 border border-white/10 rounded-xl focus:border-yellow-500 focus:bg-black outline-none transition-all"
+                        />
+                        {messages.length > 1 && (
+                          <button type="button" onClick={() => removeMessageInput(idx)} className="text-red-400 hover:bg-red-500/10 px-3 rounded-xl transition-colors">✕</button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <button type="button" onClick={addMessageInput} className="text-yellow-500 text-sm font-medium hover:text-yellow-400 transition-colors inline-block mt-2">
+                  + Thêm một lời chúc nữa
+                </button>
+
+                <button type="submit" disabled={loading} className="w-full py-3.5 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-black font-black rounded-xl mt-6 disabled:opacity-50 transition-all transform hover:-translate-y-1 shadow-lg">
+                  {loading ? 'Đang khởi tạo...' : 'Bắt Đầu Bắn Pháo 🚀'}
                 </button>
               </form>
             ) : (
-              <div className="text-center space-y-4">
-                <p className="text-green-400">✨ Tuyệt vời! Link của bạn đã sẵn sàng:</p>
-                <div className="p-3 bg-black rounded border border-white/10 break-all text-yellow-200 text-sm">{newLink}</div>
-                <button onClick={() => { navigator.clipboard.writeText(newLink); alert('Đã copy!'); }} className="w-full py-3 bg-white/10 rounded-lg font-bold">Copy Link</button>
+              <div className="text-center space-y-6 py-4">
+                <div className="w-16 h-16 bg-green-500/20 text-green-400 rounded-full flex items-center justify-center mx-auto text-3xl">✓</div>
+                <div>
+                  <p className="text-white font-semibold text-lg">Tuyệt vời!</p>
+                  <p className="text-white/60 text-sm mt-1">Link của bạn đã sẵn sàng để gửi đi.</p>
+                </div>
+                <div className="p-3 bg-black/50 rounded-xl border border-white/10 break-all text-yellow-400 text-sm font-mono">
+                  {newLink}
+                </div>
+                <button 
+                  onClick={() => { navigator.clipboard.writeText(newLink); alert('Đã copy!'); }} 
+                  className="w-full py-3.5 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold transition-all"
+                >
+                  Sao Chép Link
+                </button>
               </div>
             )}
           </div>

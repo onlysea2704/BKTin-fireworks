@@ -11,25 +11,29 @@ const serviceAccountAuth = new JWT({
 
 export async function POST(req: NextRequest) {
   try {
-    const { sender, messages } = await req.json(); // Nhận mảng messages
+    // Nhận thêm trường 'receiver' từ Form
+    const { sender, receiver, messages } = await req.json(); 
     const id = nanoid(8);
     
     const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID!, serviceAccountAuth);
     await doc.loadInfo(); 
     const sheet = doc.sheetsByIndex[0];
 
-    await sheet.loadHeaderRow();
-    if (sheet.headerValues.length === 0) {
-        await sheet.setHeaderRow(['id', 'sender', 'message', 'timestamp']);
+    // Cập nhật lại header có chứa 'receiver' nếu đây là file Google Sheet mới
+    await sheet.loadHeaderRow().catch(() => {}); // Catch lỗi nếu sheet hoàn toàn trống
+    if (!sheet.headerValues || sheet.headerValues.length === 0) {
+        await sheet.setHeaderRow(['id', 'sender', 'receiver', 'message', 'timestamp']);
     }
 
     // Lọc bỏ các lời chúc rỗng và chuyển mảng thành chuỗi JSON để lưu
     const validMessages = messages.filter((m: string) => m.trim() !== '');
 
+    // Lưu dữ liệu vào Sheet
     await sheet.addRow({
       id,
       sender,
-      message: JSON.stringify(validMessages), // Lưu mảng dưới dạng chuỗi
+      receiver,
+      message: JSON.stringify(validMessages), 
       timestamp: new Date().toISOString()
     });
 
