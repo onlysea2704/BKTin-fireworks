@@ -118,6 +118,8 @@ class FloatingText {
 
   draw(ctx: CanvasRenderingContext2D) {
     ctx.save();
+    
+    // Thuật toán Fade-in và Fade-out
     let currentAlpha = 1;
     if (this.life < 40) currentAlpha = this.life / 40;
     else if (this.life > this.maxLife - 30) currentAlpha = (this.maxLife - this.life) / 30;
@@ -132,17 +134,55 @@ class FloatingText {
     const isMobile = window.innerWidth < 768;
     const fontFamily = 'Roboto, sans-serif';
     const senderSize = isMobile ? "14px" : "16px";
-    const messageSize = isMobile ? "20px" : "28px";
-    const senderOffsetY = isMobile ? -18 : -25;
+    
+    // Tách riêng kích thước dạng số để tính toán khoảng cách dòng (line-height)
+    const messageSizeNum = isMobile ? 20 : 28;
+    const messageSize = `${messageSizeNum}px`;
 
-    // --- CẬP NHẬT CHỮ HIỂN THỊ (NGƯỜI GỬI - NGƯỜI NHẬN) ---
+    // --- 1. Xử lý Lời Chúc tự động xuống dòng ---
+    ctx.font = `600 ${messageSize} ${fontFamily}`; // Cài đặt font trước để đo kích thước chữ chính xác
+    
+    // Đặt giới hạn chiều rộng linh hoạt: 80% màn hình điện thoại hoặc tối đa 450px trên máy tính
+    const maxWidth = isMobile ? window.innerWidth * 0.8 : 450; 
+    const lineHeight = messageSizeNum * 1.4; // Khoảng cách giữa các dòng
+    
+    const words = this.wish.message.split(' ');
+    let line = '';
+    const lines: string[] = [];
+
+    // Lặp qua từng từ, cộng dồn và đo chiều rộng. Nếu vượt maxWidth thì ngắt dòng.
+    for (let n = 0; n < words.length; n++) {
+      const testLine = line + words[n] + ' ';
+      const metrics = ctx.measureText(testLine);
+      const testWidth = metrics.width;
+      
+      if (testWidth > maxWidth && n > 0) {
+        lines.push(line);
+        line = words[n] + ' ';
+      } else {
+        line = testLine;
+      }
+    }
+    lines.push(line); // Đưa dòng cuối cùng vào mảng
+
+    // --- 2. Tính toán tọa độ Y ---
+    // Nếu có nhiều dòng, đẩy toàn bộ khối chữ lên trên một chút để không bị rủ xuống quá thấp
+    const startY = lines.length > 1 ? -(lines.length * lineHeight) / 3 : 5;
+    
+    // Dòng "Người gửi chúc Người nhận" luôn nằm phía trên dòng lời chúc đầu tiên
+    const senderOffsetY = startY - (isMobile ? 25 : 35);
+
+    // --- 3. Vẽ Người Gửi chúc Người Nhận ---
     ctx.font = `300 ${senderSize} ${fontFamily}`;
     ctx.fillStyle = `hsl(${this.hue}, 100%, 85%)`;
     ctx.fillText(`${this.wish.sender} chúc ${this.wish.receiver}`, 0, senderOffsetY);
 
+    // --- 4. Vẽ Lời Chúc (In từng dòng) ---
     ctx.font = `600 ${messageSize} ${fontFamily}`;
     ctx.fillStyle = "#ffffff";
-    ctx.fillText(`${this.wish.message}`, 0, 5);
+    for (let i = 0; i < lines.length; i++) {
+      ctx.fillText(lines[i].trim(), 0, startY + (i * lineHeight));
+    }
 
     ctx.restore();
   }
